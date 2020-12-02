@@ -33,7 +33,6 @@
       pip:
         name: "{{ pulsar_package_name }}"
         version: "{{ pulsar_package_version | default(omit) }}"
-        state: latest
         virtualenv: "{{ pulsar_venv_dir }}"
         extra_args: "{{ pip_extra_args | default('') }}"
         virtualenv_command: "{{ pulsar_virtualenv_command | default(pip_virtualenv_command | default(omit)) }}"
@@ -52,6 +51,7 @@
       environment:
         PYTHONPATH: null
         VIRTUAL_ENV: "{{ pulsar_venv_dir }}"
+        PYCURL_SSL_LIBRARY: "{{ pulsar_pycurl_ssl_library }}"
 
   remote_user: "{{ pulsar_remote_users.privsep | default(__pulsar_remote_user) }}"
   become: "{{ true if pulsar_become_users.privsep is defined else __pulsar_become }}"

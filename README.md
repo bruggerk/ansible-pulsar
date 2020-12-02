@@ -68,8 +68,6 @@ you use, and where its configuration files will be placed:
 - `pulsar_config_dir` (default: `<pulsar_root>/config`): Directory that will be used for Pulsar configuration files.
 - `pulsar_optional_dependencies` (default: None): List of optional dependency modules to install. Whether or not you
   need these depends on what features you are enabling.
-- `pulsar_install_environments` (default: None): Installing dependencies may require setting certain environment
-  variables to compile successfully.
 
 
 **User management and privilege separation**
@@ -134,20 +132,6 @@ Many of these dependencies have their own dependencies. A nice future
 enhancement to this role would be to install the dependencies' dependencies via
 the system package manager if desired.
 
-### pulsar_install_environments ###
-
-Some sites may need to set environment variables when installing certain
-modules, e.g. to point pyOpenSSL at a non-standard OpenSSL or libffi locations,
-or to instruct pycurl to use the NSS library:
-
-    pulsar_install_environments:
-      pyOpenSSL:
-        PKG_CONFIG_PATH: "/opt/site/libffi/lib64/pkgconfig"
-        CFLAGS: "-I/opt/site/openssl/include"
-        LDFLAGS: "-L/opt/site/openssl/lib"
-      pycurl:
-        PYCURL_SSL_LIBRARY: "nss"
-
 [pulsardocs]: http://pulsar.readthedocs.org/
 
 Dependencies
@@ -196,6 +180,54 @@ Install Pulsar with directory separation and also install Galaxy:
         - role: galaxyproject.galaxy
           galaxy_manage_mutable_setup: no
           galaxy_manage_database: no
+          
+Install Pulsar into a Centos7 host with directory and privilege separation, systemd service configuration, 
+webless mode and communication via a message queue:
+
+    - hosts: pulsarservers
+      vars:
+        pulsar_root: /opt/pulsar
+        pulsar_persistence_dir: /var/opt/pulsar/persisted_data
+        pulsar_staging_dir: /var/opt/pulsar/staging
+        pulsar_dependencies_dir: /var/opt/pulsar/deps
+        pulsar_optional_dependencies:
+          - pycurl
+          - kombu
+          - psutil
+        pulsar_systemd: true
+        pulsar_systemd_runner: webless
+        pulsar_separate_privileges: yes
+        pulsar_privsep_user: centos
+        pulsar_yaml_config:
+          conda_auto_init: true
+          conda_auto_install: true
+          assign_ids: none
+          message_queue_url: "message_queue_url"
+          min_polling_interval: 0.5
+          persistence_directory: "{{ pulsar_persistence_dir }}"
+          staging_directory: "{{ pulsar_staging_dir }}"
+          tool_dependency_dir: "{{ pulsar_dependencies_dir }}"
+          managers:
+            production:
+              submit_universe: vanilla
+              type: queued_condor
+            test:
+              submit_universe: vanilla
+              type: queued_condor    
+      pre_tasks:
+        - name: Install dependencies
+          become: yes
+          package:
+            state: latest
+            name:
+            - git
+            - python-virtualenv
+            - python3
+            - curl
+            - libcurl-devel    
+      roles:
+        - role: galaxyproject.pulsar
+  
 
 License
 -------
